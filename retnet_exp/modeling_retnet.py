@@ -9,8 +9,7 @@ import torch.utils.checkpoint
 from timm.models.layers import drop_path
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-
-# from transformers import top_k_top_p_filtering
+from transformers import top_k_top_p_filtering
 from transformers.modeling_outputs import ModelOutput, SequenceClassifierOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import logging
@@ -87,13 +86,15 @@ class RetNetRelPos(nn.Module):
         # decay (gamma)
         if config.use_lm_decay:
             # NOTE: alternative way described in the paper
-            s = torch.log(torch.tensor(1 / 32))
-            e = torch.log(torch.tensor(1 / 512))
-            decay = torch.log(1 - torch.exp(torch.linspace(s, e, num_heads)))  # [h,]
+            # s = torch.log(torch.tensor(1 / 32))
+            # e = torch.log(torch.tensor(1 / 512))
+            # decay = torch.log(1 - torch.exp(torch.linspace(s, e, num_heads)))  # [h,]
+            pass
         else:
-            decay = torch.log(
-                1 - 2 ** (-5 - torch.arange(num_heads, dtype=torch.float))
-            )
+            # decay = torch.log(
+            #     1 - 2 ** (-5 - torch.arange(num_heads, dtype=torch.float))
+            # )
+            decay = torch.tensor([0.0] * num_heads)
         self.register_buffer("angle", angle)
         self.register_buffer("decay", decay)
         self.recurrent_chunk_size = config.recurrent_chunk_size
@@ -1228,12 +1229,8 @@ class RetNetForCausalLM(RetNetPreTrainedModel):
     def sample_token(self, logit, do_sample=False, top_k=1, top_p=1.0, temperature=1.0):
         if not do_sample:
             return torch.argmax(logit, dim=-1, keepdim=True)
-        else:
-            raise NotImplementedError("Sampling not implemented yet")
-            filtered = top_k_top_p_filtering(
-                logit / temperature, top_k=top_k, top_p=top_p
-            )
-            return torch.multinomial(torch.softmax(filtered, dim=-1), num_samples=1)
+        filtered = top_k_top_p_filtering(logit / temperature, top_k=top_k, top_p=top_p)
+        return torch.multinomial(torch.softmax(filtered, dim=-1), num_samples=1)
 
     @torch.inference_mode()
     def custom_generate(

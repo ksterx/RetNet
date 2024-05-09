@@ -85,7 +85,7 @@ def main():
         train_args.gradient_checkpointing_kwargs = {"use_reentrant": False}
 
     print("Spiral-AI/anonymous-chat-mt (base)")
-    data_base = (
+    data_base_a = (
         load_from_disk("/nas/share/datasets/Spiral-AI+anonymous-chat-mt/main/base-AB")
         .select_columns(["messages", "speakers", "num_messages", "min", "max"])
         .map(
@@ -102,8 +102,25 @@ def main():
         .train_test_split(test_size=100, seed=42)
     )
 
+    data_base_b = (
+        load_from_disk("/nas/share/datasets/Spiral-AI+anonymous-chat-mt/main/base-AB")
+        .select_columns(["messages", "speakers", "num_messages", "min", "max"])
+        .map(
+            lambda x: to_mt_prompt(
+                x,
+                template="calm2",
+                template_registry=TEMPLATE_REGISTRY,
+                target_speaker="B",
+                do_split=False,
+            )
+        )
+        .select_columns(["prompt"])
+        .shuffle(seed=42)["train"]
+        .train_test_split(test_size=100, seed=42)
+    )
+
     print("Spiral-AI/anonymous-chat-mt (scenario)")
-    data_scenario = (
+    data_scenario_a = (
         load_from_disk(
             "/nas/share/datasets/Spiral-AI+anonymous-chat-mt/main/scenario-AB"
         )
@@ -122,12 +139,88 @@ def main():
         .train_test_split(test_size=100, seed=42)
     )
 
-    train_base, eval_base = data_base["train"], data_base["test"]
-    train_scenario, eval_scenario = data_scenario["train"], data_scenario["test"]
+    data_scenario_b = (
+        load_from_disk(
+            "/nas/share/datasets/Spiral-AI+anonymous-chat-mt/main/scenario-AB"
+        )
+        .select_columns(["messages", "speakers", "num_messages", "min", "max"])
+        .map(
+            lambda x: to_mt_prompt(
+                x,
+                template="calm2",
+                template_registry=TEMPLATE_REGISTRY,
+                target_speaker="B",
+                do_split=False,
+            )
+        )
+        .select_columns(["prompt"])
+        .shuffle(seed=42)["train"]
+        .train_test_split(test_size=100, seed=42)
+    )
 
-    train_dataset = concatenate_datasets([train_base, train_scenario])
+    data_wiki_a = (
+        load_from_disk("/nas/share/datasets/Spiral-AI+wiki-chat-mt/main/base-AB")
+        .select_columns(["messages", "speakers", "num_messages", "min", "max"])
+        .map(
+            lambda x: to_mt_prompt(
+                x,
+                template="calm2",
+                template_registry=TEMPLATE_REGISTRY,
+                target_speaker="A",
+                do_split=False,
+            )
+        )
+        .select_columns(["prompt"])
+        .shuffle(seed=42)["train"]
+        .train_test_split(test_size=100, seed=42)
+    )
 
-    eval_dataset = {"base": eval_base, "scenario": eval_scenario}
+    data_wiki_b = (
+        load_from_disk("/nas/share/datasets/Spiral-AI+wiki-chat-mt/main/base-AB")
+        .select_columns(["messages", "speakers", "num_messages", "min", "max"])
+        .map(
+            lambda x: to_mt_prompt(
+                x,
+                template="calm2",
+                template_registry=TEMPLATE_REGISTRY,
+                target_speaker="B",
+                do_split=False,
+            )
+        )
+        .select_columns(["prompt"])
+        .shuffle(seed=42)["train"]
+        .train_test_split(test_size=100, seed=42)
+    )
+
+    train_base_a, eval_base_a = data_base_a["train"], data_base_a["test"]
+    train_base_b, eval_base_b = data_base_b["train"], data_base_b["test"]
+    train_scenario_a, eval_scenario_a = (
+        data_scenario_a["train"],
+        data_scenario_a["test"],
+    )
+    train_scenario_b, eval_scenario_b = (
+        data_scenario_b["train"],
+        data_scenario_b["test"],
+    )
+    train_wiki_a, eval_wiki_a = data_wiki_a["train"], data_wiki_a["test"]
+    train_wiki_b, eval_wiki_b = data_wiki_b["train"], data_wiki_b["test"]
+
+    train_dataset = concatenate_datasets(
+        [
+            train_base_a,
+            train_base_b,
+            train_scenario_a,
+            train_scenario_b,
+            train_wiki_a,
+            train_wiki_b,
+        ]
+    ).shuffle(seed=42)
+
+    eval_dataset = {
+        "base": eval_base_a,
+        "scenario": eval_scenario_a,
+        "wiki": eval_wiki_a,
+    }
 
     repo_id = "Spiral-AI/Spiral-RetNet-3b-base"
     model = RetNetForCausalLM.from_pretrained(repo_id)

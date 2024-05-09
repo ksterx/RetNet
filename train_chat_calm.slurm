@@ -59,8 +59,8 @@ declare -a CONTAINER_OPTIONS=(
 ## W&Bの設定
 export WANDB_API_KEY=$WANDB_API_KEY
 export WANDB_PROJECT="RetNet"
-export WANDB_NAME="open-calm_ctxLen2048_anonym"
-export WANDB_NOTES="open-calm-3b, ctxLen2048, anonumous-chat-mt"
+export WANDB_NAME="open-calm_anonym+wiki"
+export WANDB_NOTES="open-calm-3b, ctxLen2048, anonumous-chat-mt+wiki-chat-mt"
 export RESULT_DIR=/nas/$USER/results
 export HF_HOME=/nas/share/huggingface
 export SLACK_API_TOKEN=$SLACK_API_TOKEN

@@ -41,7 +41,7 @@ export SPCHAT_LIBRARY_PATH=/home/k_ishikawa/workspace/SpiralChat
 : "${APPS_PATH:=/home/k_ishikawa/workspace/RetNet}"
 : "${DATA_PATH:=/nas/share}" # 読み込むデータのディレクトリ
 : "${RESULT_PATH:=/nas/$USER/results}" # 結果を保存するディレクトリ
-: "${IMAGE:=/home/k_ishikawa/sqshes/ksterx+pyxis+2.2.sqsh}"
+: "${IMAGE:=/home/k_ishikawa/sqshes/ksterx+pyxis+2.1.sqsh}"
 : "${WORK_DIR:=/home/$USER/workspace}" # 作業ディレクトリの指定
 
 : "${DATA_MOUNT:=$DATA_PATH:$DATA_PATH}" # データマウントポイントの指定
@@ -59,8 +59,8 @@ declare -a CONTAINER_OPTIONS=(
 ## W&Bの設定
 export WANDB_API_KEY=$WANDB_API_KEY
 export WANDB_PROJECT="RetNet"
-export WANDB_NAME="retnet3b_anonym_1ep"
-export WANDB_NOTES="RetNet3b, ctxLen2048, anonumous-chat-mt+wiki-chat-mt"
+export WANDB_NAME="open-calm_alpaca+ichikara"
+export WANDB_NOTES="open-calm-3b, ctxLen2048, alpaca+ichikara"
 export RESULT_DIR=/nas/$USER/results
 export HF_HOME=/nas/share/huggingface
 export SLACK_API_TOKEN=$SLACK_API_TOKEN
@@ -70,7 +70,7 @@ export SLACK_API_TOKEN=$SLACK_API_TOKEN
 srun -l "${CONTAINER_OPTIONS[@]}" \
     torchrun \
         --nproc_per_node 8 \
-        train_chat_retnet.py \
+        train_instruct_calm.py \
             --max_seq_length 2048 \
             --bf16 True \
             --optim adamw_bnb_8bit \
@@ -84,7 +84,7 @@ srun -l "${CONTAINER_OPTIONS[@]}" \
             --evaluation_strategy steps \
             --remove_unused_columns True \
             --lr_scheduler_type cosine \
-            --learning_rate 3e-4 \
+            --learning_rate 1e-5 \
             --weight_decay 0.01 \
             --logging_steps 1 \
             --ddp_find_unused_parameters False \

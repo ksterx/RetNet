@@ -70,8 +70,32 @@ class MyArgs:
     max_seq_length: int = 2048
     base_model_repo: str = "cyberagent/open-calm-3b"
     base_model_revision: str = "main"
-    model_repo: str = "Spiral-AI/open-calm-3b-chat"
+    model_repo: str = "Spiral-AI/open-calm-3b-instruct"
     model_revision: str = "main"
+
+
+def formatting_func_alpaca(examples):
+    prompt = ""
+    if examples["input"] is not None:
+        prompt += "REFERENCE: " + examples["input"] + "\n\n"
+    if examples["instruction"] is None:
+        return {"prompt": None}
+    prompt += "USER: " + examples["instruction"] + "\n"
+    if examples["output"] is None:
+        return {"prompt": None}
+    prompt += "ASSISTANT: " + examples["output"] + "<|endoftext|>"
+    return {"prompt": prompt}
+
+
+def formatting_func_ichikara(examples):
+    prompt = ""
+    if examples["text"] is None:
+        return {"prompt": None}
+    prompt += "USER: " + examples["text"] + "\n"
+    if examples["output"] is None:
+        return {"prompt": None}
+    prompt += "ASSISTANT: " + examples["output"] + "<|endoftext|>"
+    return {"prompt": prompt}
 
 
 def main():
@@ -83,50 +107,38 @@ def main():
     if train_args.gradient_checkpointing_kwargs is None:
         train_args.gradient_checkpointing_kwargs = {"use_reentrant": False}
 
-    print("Spiral-AI/anonymous-chat-mt (base)")
-    data_base = (
-        load_from_disk("/nas/share/datasets/Spiral-AI+anonymous-chat-mt/main/base-AB")
-        .select_columns(["messages", "speakers", "num_messages", "min", "max"])
-        .map(
-            lambda x: to_mt_prompt(
-                x,
-                template="calm2",
-                template_registry=TEMPLATE_REGISTRY,
-                target_speaker="A",
-                do_split=False,
-            )
+    print("Spiral-AI/super-alpaca")
+    alpaca = (
+        load_model_from_tree(
+            "/nas/share/datasets/Spiral-AI+super-alpaca/main/annotated"
         )
+        .map(formatting_func_alpaca, batched=False)
+        .filter(lambda x: x["prompt"] is not None)["train"]
         .select_columns(["prompt"])
-        .shuffle(seed=42)["train"]
+        .shuffle(seed=42)
         .train_test_split(test_size=100, seed=42)
     )
 
-    print("Spiral-AI/anonymous-chat-mt (scenario)")
-    data_scenario = (
-        load_from_disk(
-            "/nas/share/datasets/Spiral-AI+anonymous-chat-mt/main/scenario-AB"
+    print("Spiral-AI/ichikara-instructions")
+    ichikara = (
+        load_model_from_tree(
+            "/nas/share/datasets/Spiral-AI+ichikara-instruction/ver-003-001/data"
         )
-        .select_columns(["messages", "speakers", "num_messages", "min", "max"])
-        .map(
-            lambda x: to_mt_prompt(
-                x,
-                template="calm2",
-                template_registry=TEMPLATE_REGISTRY,
-                target_speaker="A",
-                do_split=False,
-            )
-        )
+        .map(formatting_func_ichikara, batched=False)
+        .filter(lambda x: x["prompt"] is not None)["train"]
         .select_columns(["prompt"])
-        .shuffle(seed=42)["train"]
+        .shuffle(seed=42)
         .train_test_split(test_size=100, seed=42)
     )
 
-    train_base, eval_base = data_base["train"], data_base["test"]
-    train_scenario, eval_scenario = data_scenario["train"], data_scenario["test"]
+    train_alpaca = alpaca["train"]
+    eval_alpaca = alpaca["test"]
 
-    train_dataset = concatenate_datasets([train_base, train_scenario])
+    train_ichikara = ichikara["train"]
+    eval_ichikara = ichikara["test"]
 
-    eval_dataset = {"base": eval_base, "scenario": eval_scenario}
+    train_dataset = concatenate_datasets([train_alpaca, train_ichikara])
+    eval_dataset = {"alpaca": eval_alpaca, "ichikara": eval_ichikara}
 
     repo_id = "cyberagent/open-calm-3b"
     model = AutoModelForCausalLM.from_pretrained(repo_id)
@@ -142,18 +154,6 @@ def main():
     )
     tokenizer.unk_token = tokenizer.eos_token
     tokenizer.bos_token = tokenizer.eos_token
-
-    # save_steps = get_save_steps(
-    #     num_epochs=train_args.num_train_epochs,
-    #     num_gpus=torch.cuda.device_count(),
-    #     train_dataset=train_dataset,
-    #     batch_size=train_args.per_device_train_batch_size,
-    #     gradient_accumulation_steps=train_args.gradient_accumulation_steps,
-    #     num_checkpoints=50,
-    # )
-    # print(f"Saving interval: {save_steps}")
-    # train_args.save_steps = save_steps
-    # train_args.eval_steps = save_steps
 
     trainer = SFTTrainer(
         model=model,
@@ -182,7 +182,7 @@ def main():
 
     if train_args.do_train:
         trainer.train()
-        trainer.save_model()
+        trainer.save_model("best")
 
 
 if __name__ == "__main__":

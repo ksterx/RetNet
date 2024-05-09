@@ -12,7 +12,7 @@ if __name__ == "__main__":
         "-m",
         "--model",
         type=str,
-        default="/nas/k_ishikawa/results/RetNet/retnet3b_anonym_3ep/checkpoint-860",
+        default="/nas/k_ishikawa/results/RetNet/retnet3b_ctxLen2048_anonym/checkpoint-280",
     )
     parser.add_argument("-max", "--max-tokens", type=int, default=128)
     parser.add_argument("-t", "--temperature", type=float, default=0.8)
@@ -42,6 +42,27 @@ if __name__ == "__main__":
         response = tokenizer.decode(outputs[0])
         return response[len(prompt) :]
 
+    # def chat(system=""):
+    #     history = ""
+    #     while True:
+    #         user_input = input("USER: ")
+    #         if user_input == "exit":
+    #             break
+    #         elif user_input == "clear":
+    #             history = ""
+    #             print("=" * 80)
+    #             continue
+    #         if system:
+    #             history = system + "\n\n" + history
+    #         response = generate(user_input, history)
+    #         print(f"ASSISTANT: {stopper.format(response)}")
+    #         history += f"USER: {user_input}\nASSISTANT: {response}\n"
+    #         if system:
+    #             print(history)
+    #             history = history[len(system) + 2 :]
+
+    # chat(system=args.system)
+
     def chat(system=""):
         history = ""
         while True:
@@ -53,11 +74,17 @@ if __name__ == "__main__":
                 print("=" * 80)
                 continue
             if system:
-                history = system + "\n\n" + history
+                history = system + history
             response = generate(user_input, history)
             print(f"ASSISTANT: {stopper.format(response)}")
             history += f"USER: {user_input}\nASSISTANT: {response}\n"
             if system:
-                history = history[len(system) + 2 :]
+                history = history[len(system) :]
 
-    chat(system=args.system)
+    chat(
+        system="""\
+ASSISTANTの名前は「みきお」です。
+USERの名前は「ミクリ」です。
+
+"""
+    )

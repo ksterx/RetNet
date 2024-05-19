@@ -59,8 +59,8 @@ declare -a CONTAINER_OPTIONS=(
 ## W&Bの設定
 export WANDB_API_KEY=$WANDB_API_KEY
 export WANDB_PROJECT="RetNet"
-export WANDB_NAME="open-calm_alpaca+ichikara"
-export WANDB_NOTES="open-calm-3b, ctxLen2048, alpaca+ichikara"
+export WANDB_NAME="retnet3b_alpaca+ichikara"
+export WANDB_NOTES="retnet-3b, ctxLen2048, alpaca+ichikara"
 export RESULT_DIR=/nas/$USER/results
 export HF_HOME=/nas/share/huggingface
 export SLACK_API_TOKEN=$SLACK_API_TOKEN
@@ -70,7 +70,7 @@ export SLACK_API_TOKEN=$SLACK_API_TOKEN
 srun -l "${CONTAINER_OPTIONS[@]}" \
     torchrun \
         --nproc_per_node 8 \
-        train_instruct_calm.py \
+        train_instruct_retnet.py \
             --max_seq_length 2048 \
             --bf16 True \
             --optim adamw_bnb_8bit \
@@ -81,6 +81,7 @@ srun -l "${CONTAINER_OPTIONS[@]}" \
             --num_train_epochs 1 \
             --save_steps 10 \
             --eval_steps 10 \
+            --save_total_limit 3 \
             --evaluation_strategy steps \
             --remove_unused_columns True \
             --lr_scheduler_type cosine \

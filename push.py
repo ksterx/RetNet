@@ -1,8 +1,9 @@
 import argparse
 import os
 
-from retnet.modeling_retnet_test import RetNetForCausalLM
 from transformers import AutoTokenizer
+
+from retnet.modeling_retnet import RetNetForCausalLM
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -19,7 +20,7 @@ path = os.path.join(args.model_path, args.checkpoint)
 model = RetNetForCausalLM.from_pretrained(path)
 model.push_to_hub(
     "Spiral-AI/RetNet-3b",
-    # revision=args.checkpoint,
+    revision=args.checkpoint,
     private=True,
 )
 

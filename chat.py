@@ -12,7 +12,7 @@ if __name__ == "__main__":
         "-m",
         "--model",
         type=str,
-        default="/nas/k_ishikawa/results/RetNet/retnet3b_ctxLen2048_anonym/checkpoint-280",
+        default="/nas/k_ishikawa/results/RetNet/retnet3b_anonym_1ep",
     )
     parser.add_argument("-max", "--max-tokens", type=int, default=128)
     parser.add_argument("-t", "--temperature", type=float, default=0.8)
@@ -83,8 +83,11 @@ if __name__ == "__main__":
 
     chat(
         system="""\
-ASSISTANTの名前は「みきお」です。
-USERの名前は「ミクリ」です。
-
+USER: よろしくね
+ASSISTANT: よろしくですわ<|endoftext|>
+USER: なにしてるの？
+ASSISTANT: 今はお話ししているんですわ<|endoftext|>
+USER: なにか好きなものはある？
+ASSISTANT: カレーが好きですわ<|endoftext|>
 """
     )
